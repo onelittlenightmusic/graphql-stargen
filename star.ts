@@ -3,6 +3,7 @@ import YAML from 'yaml'
 import { GraphQLSchema } from 'graphql'
 import { createRemoteSchema } from './createRemoteSchema'
 import { mergeSchemas } from 'graphql-tools'
+import { Binding } from 'graphql-binding';
 
 interface StarSchemaMetadata {
     root: boolean
@@ -27,8 +28,10 @@ export interface StarSchemaTable {
     definition: StarSchemaDefinition
     links: StarSchemaLink[]
     GraphQLSchema: GraphQLSchema
+    binding: Binding
     createLinkSchema(): string
     createResolvers(any, StarSchemaMap): any
+    createSchema(): void
 }
 
 export interface StarSchemaMap {
@@ -46,6 +49,7 @@ class StarSchemaTableImpl implements StarSchemaTable {
     definition: StarSchemaDefinition
     links: any[]
     GraphQLSchema: GraphQLSchema
+    binding: Binding
     constructor(table: StarSchemaTable) {
         Object.assign(this, table)
     }
@@ -76,6 +80,10 @@ class StarSchemaTableImpl implements StarSchemaTable {
         }
         return { [this.name]: rtn }
     }
+    async createSchema() {
+        this.GraphQLSchema = await createRemoteSchema(this.definition.url) 
+        this.binding = createBinding(this.GraphQLSchema)
+    }
 }
 
 class StarSchemaMapImpl implements StarSchemaMap {
@@ -90,7 +98,9 @@ class StarSchemaMapImpl implements StarSchemaMap {
         this.root = root
     }
     async getAllSchema() {
-        await getAllSchemaPrivate(this.tables)
+        await Promise.all(
+            this.tables.map(async schema => { await schema.createSchema() })
+        )
     }
     getRootTable() {
         return this.root
@@ -126,16 +136,6 @@ export const loadConfig = (filename: string) => {
     return starSchema
 }
 
-const createSchema = async (schema: StarSchemaTable) => {
-    return await createRemoteSchema(schema.definition.url) 
-}
-
-const getAllSchemaPrivate = async (starSchemas: StarSchemaTable[]) => {
-    await Promise.all(
-        starSchemas.map(async schema => { schema.GraphQLSchema = await createSchema(schema) })
-    )
-}
-
 const toType = (type: string, onlyOne: boolean) => {
     if(onlyOne) {
         return type
@@ -155,4 +155,8 @@ export const getLinkLabel = (link: StarSchemaLink) => {
         return link.to
     }
     return link.as
+}
+
+const createBinding = (newSchema: GraphQLSchema) => {
+    return new Binding ({ schema: newSchema })
 }

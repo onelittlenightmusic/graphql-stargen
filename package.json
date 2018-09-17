@@ -1,7 +1,22 @@
 {
+  "name": "graphql-stargen",
+  "version": "1.0.4",
+  "main": "dist/index.js",
+  "types" : "dist/index.d.ts",
+  "keywords": [
+    "graphql",
+    "star schema"
+  ],
+  "author": "onelittlenightmusic",
+  "license": "Apache Licence v2",
+  "bugs": {
+    "url": "https://github.com/onelittlenightmusic/graphql-stargen/issues"
+  },
+  "homepage": "https://github.com/onelittlenightmusic/graphql-stargen",
   "scripts": {
-    "start": "nodemon --ext ts,yaml --exec 'ts-node' index.ts",
-    "test": "ava"
+    "start": "nodemon --ext ts,yaml --exec 'ts-node' server.ts",
+    "test": "ava",
+    "build": "tsc"
   },
   "dependencies": {
     "apollo-link-batch-http": "^1.2.2",
@@ -30,12 +45,12 @@
     "typescript": "^3.0.1"
   },
   "ava": {
-		"compileEnhancements": false,
-		"extensions": [
-			"ts"
-		],
-		"require": [
-			"ts-node/register"
-		]
-	}
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
+  }
 }

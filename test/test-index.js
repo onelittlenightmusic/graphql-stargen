@@ -1,13 +1,13 @@
 import { GraphQLServer } from 'graphql-yoga'
 import test from 'ava';
-import { generateStarSchema } from '../schemagen'
+import { createStarSchema } from 'graphql-stargen'
 import { config } from 'dotenv'
 config()
 const __API_PORT__ = process.env.API_PORT
 
 
 async function run() {
-	const schema = await generateStarSchema('./staryaml.yaml')
+	const schema = await createStarSchema('./staryaml.yaml')
 	// const logInput = async (resolve, root, args, context, info) => {
 	// 	// console.log(`>>>logInput: ${JSON.stringify(root)},${JSON.stringify(args)}`)
 	// 	const result = await resolve(root, args, context, info)

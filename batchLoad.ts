@@ -1,20 +1,14 @@
-import { Binding } from 'graphql-binding'
-import { GraphQLSchema } from 'graphql';
 import * as DataLoader from 'dataloader'
 
 type BatchLoaderOperation = (parameterArray: any[]) => Promise<any[]>
-type BatchingQuery = (binding: any, query: string, loaderParameters: any) => any
+type BatchingQuery = (loaderParameters: any) => any
 
-const createBinding = (newSchema: GraphQLSchema) => {
-    return new Binding ({ schema: newSchema })
-}
-
-export const createBatchLoader = (schema: GraphQLSchema, query: string, batchingQuery: BatchingQuery) => {
-    const binding = createBinding(schema)
-
+export const createBatchLoader = (batchingQuery: BatchingQuery, sameAt: {[key:string]: any}) => {
+    var keyName = Object.keys(sameAt)[0]
+    var childKeyName = sameAt[keyName]
     const batchLoaderOperation: BatchLoaderOperation = async parameterArray => {
-        const answers = await batchingQuery(binding, query, parameterArray)
-        return sortByKey(answers, 'address', parameterArray.map(parent => parent.address))
+        const answers = await batchingQuery(parameterArray)
+        return sortByKey(answers, childKeyName, parameterArray.map(parent => parent[keyName]))
     }
 
     return new DataLoader<any, any[]>(batchLoaderOperation);
