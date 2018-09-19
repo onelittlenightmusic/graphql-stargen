@@ -2,20 +2,20 @@
 apiVersion: v1
 kind: Star
 tables:
-- name: event
+- name: User
   metadata:
     root: true
   definition:
     type: graphql
-    url: 'https://www.universe.com/graphql/beta'
-    query: 'event'
+    url: 'http://localhost:4020'
+    query: 'users'
   links:
-  - to: 'location'
-    # as: 'location2'
+  - to: 'Location'
+    as: 'location'
     sameAt:
-      cityName: place
+      address: place
     onlyOne: true
-- name: location
+- name: Location
   definition:
     type: graphql
     url: 'https://5rrx10z19.lp.gql.zone/graphql'

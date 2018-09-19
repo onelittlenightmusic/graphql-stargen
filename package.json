@@ -2,7 +2,7 @@
   "name": "graphql-stargen",
   "version": "1.0.4",
   "main": "dist/index.js",
-  "types" : "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "keywords": [
     "graphql",
     "star schema"
@@ -21,7 +21,7 @@
   "dependencies": {
     "apollo-link-batch-http": "^1.2.2",
     "apollo-link-dedup": "^1.0.9",
-    "apollo-link-http": "^1.5.4",
+    "apollo-link-http": "^1.5.5",
     "apollo-server-express": "^2.0.0",
     "body-parser": "^1.18.3",
     "dataloader": "^1.4.0",

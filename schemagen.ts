@@ -1,5 +1,6 @@
 import { GraphQLSchema } from 'graphql';
 import { loadConfig, StarSchemaTable, StarSchemaLink, getLinkLabel } from './star'
+// import { loadConfig, StarSchemaTable, StarSchemaLink } from './star'
 import { createBatchLoader } from './batchLoad'
 // import { loadConfig, createConnection } from './star'
 
@@ -7,17 +8,21 @@ import { createBatchLoader } from './batchLoad'
 //     childrenBatchParameter(childrenKeys: string[]): any
 // }
 
-export async function generateStarSchema(starYamlFile: string): Promise<GraphQLSchema | null> {
+export async function generateStarSchema(starYamlFile: string, hintOpt?: any): Promise<GraphQLSchema | null> {
     var starSchemaMap = loadConfig(starYamlFile)
     await starSchemaMap.getAllSchema()
 
    const createMergeResolver = (link: StarSchemaLink) => {
         return (toTable: StarSchemaTable) => {
             var hint
-            if(toTable.definition.type == 'graphql-opencrud') {
-                hint = createOpenCRUDHint(link.sameAt)
+            if(hintOpt == null) {
+                if(toTable.definition.type == 'graphql-opencrud') {
+                    hint = createOpenCRUDHint(link.sameAt)
+                } else {
+                    hint = createGeneralHint(toTable, link.sameAt)
+                }
             } else {
-                hint = createGeneralHint(link.sameAt)
+                hint = hintOpt(toTable, link.sameAt)
             }
             // ToDo: create each hint
             var childQuery
@@ -26,8 +31,12 @@ export async function generateStarSchema(starYamlFile: string): Promise<GraphQLS
             } else {
                 childQuery = hint.childrenSingleParameter
             }
+            if(childQuery == null) {
+                console.log('null')
+                return
+            }
             return async (parent: any, args: any, context: any, info: any) => {
-                var results = (await childQuery(parent))
+                var results = (await childQuery(parent, context, info))
                 if(link.onlyOne) {
                     return results[0]
                 }
@@ -56,15 +65,16 @@ export const createOpenCRUDHint = (sameAt: {[key:string]: any}) => {
 	}
 }
 
-export const createGeneralHint = (sameAt: {[key:string]: any}) => {
+export const createGeneralHint = (toTable: StarSchemaTable, sameAt: {[key:string]: any}) => {
     var keyName = Object.keys(sameAt)[0]
     var childKeyName = sameAt[keyName]
     return {
         type: 'single',
-		childrenSingleParameter: parent => { 
-            return { 
-                [childKeyName]: parent[keyName]
-            } 
+		childrenSingleParameter: async parent => { 
+            return await toTable.binding.query[toTable.definition.query]({ where: {
+                    [childKeyName]: parent[keyName] 
+                }
+            })
         }
 	}
 }

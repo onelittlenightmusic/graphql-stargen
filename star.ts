@@ -29,7 +29,7 @@ export interface StarSchemaTable {
     links: StarSchemaLink[]
     GraphQLSchema: GraphQLSchema
     binding: Binding
-    createLinkSchema(): string
+    createLinkSchema(): string | null
     createResolvers(any, StarSchemaMap): any
     createSchema(): void
 }
@@ -51,9 +51,11 @@ class StarSchemaTableImpl implements StarSchemaTable {
     GraphQLSchema: GraphQLSchema
     binding: Binding
     constructor(table: StarSchemaTable) {
+        this.links = []
         Object.assign(this, table)
     }
     createLinkSchema() {
+        if(this.links.length == 0) { return null }
         return `
         extend type ${this.name} {
             ${createLinks(this)}
@@ -70,7 +72,6 @@ class StarSchemaTableImpl implements StarSchemaTable {
             var resolverOfJoin = mergeResolvers[label](toTable)
             var resolve = async (parent: any, args: any, context: any, info: any) => {
                 return await (resolverOfJoin(parent, args, context, info))
-                
             }
             var resolver = {
                 fragment,
@@ -81,7 +82,7 @@ class StarSchemaTableImpl implements StarSchemaTable {
         return { [this.name]: rtn }
     }
     async createSchema() {
-        this.GraphQLSchema = await createRemoteSchema(this.definition.url) 
+        this.GraphQLSchema = await createRemoteSchema(this.definition.url)
         this.binding = createBinding(this.GraphQLSchema)
     }
 }
@@ -111,7 +112,10 @@ class StarSchemaMapImpl implements StarSchemaMap {
     schemas() {
         var rtn: (GraphQLSchema | string)[] = this.tables.map(schema => schema.GraphQLSchema)
         // todo: not only root 
-        rtn.push(this.root.createLinkSchema())
+        var linkDef = this.root.createLinkSchema()
+        if(linkDef != null) {
+            rtn.push(linkDef)
+        }
         return rtn
     }
     createMergeArgs(mergeResolvers) {

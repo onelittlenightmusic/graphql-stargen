@@ -4,6 +4,8 @@ import { HttpLink } from 'apollo-link-http'
 // import { HTTPLinkDataloader } from 'http-link-dataloader' // not applicable
 // import { DedupLink } from 'apollo-link-dedup'
 import fetch from 'node-fetch'
+// import * as fetch from 'cross-fetch'
+// import fetch from 'cross-fetch'
 
 export const createRemoteSchema = async (uri: string) => {
     const link = new HttpLink({uri, fetch})
