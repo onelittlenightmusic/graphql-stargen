@@ -1,12 +1,7 @@
 import { GraphQLSchema } from 'graphql';
 import { loadConfig, StarSchemaTable, StarSchemaLink, getLinkLabel } from './star'
-// import { loadConfig, StarSchemaTable, StarSchemaLink } from './star'
 import { createBatchLoader } from './batchLoad'
-// import { loadConfig, createConnection } from './star'
 
-// interface ResolverHint {
-//     childrenBatchParameter(childrenKeys: string[]): any
-// }
 
 export async function generateStarSchema(starYamlFile: string, hintOpt?: any): Promise<GraphQLSchema | null> {
     var starSchemaMap = loadConfig(starYamlFile)
@@ -15,16 +10,17 @@ export async function generateStarSchema(starYamlFile: string, hintOpt?: any): P
    const createMergeResolver = (link: StarSchemaLink) => {
         return (toTable: StarSchemaTable) => {
             var hint
+            var creator;
             if(hintOpt == null) {
                 if(toTable.definition.type == 'graphql-opencrud') {
-                    hint = createOpenCRUDHint(link.sameAt)
+                    creator = createOpenCRUDHint
                 } else {
-                    hint = createGeneralHint(toTable, link.sameAt)
+                    creator = createGeneralHint
                 }
             } else {
-                hint = hintOpt(toTable, link.sameAt)
+                creator = hintOpt
             }
-            // ToDo: create each hint
+            hint = creator(toTable, link.sameAt)
             var childQuery
             if(hint.type == 'batch') {
                 childQuery = generateBatchChildQuery(hint, toTable, link)
@@ -52,7 +48,7 @@ export async function generateStarSchema(starYamlFile: string, hintOpt?: any): P
     return starSchemaMap.createTotalExecutableSchema(resolvers)
 }
 
-export const createOpenCRUDHint = (sameAt: {[key:string]: any}) => {
+export const createOpenCRUDHint = (toTable: StarSchemaTable, sameAt: {[key:string]: any}) => {
     var keyName = Object.keys(sameAt)[0]
     var childKeyName = sameAt[keyName]
     return {
@@ -70,32 +66,26 @@ export const createGeneralHint = (toTable: StarSchemaTable, sameAt: {[key:string
     var childKeyName = sameAt[keyName]
     return {
         type: 'single',
-		childrenSingleParameter: async parent => { 
-            return await toTable.binding.query[toTable.definition.query]({ where: {
+		childrenSingleParameter: async (parent, context, info) => { 
+            return await toTable.binding.delegate('query', toTable.definition.query,
+                { where: {
                     [childKeyName]: parent[keyName] 
-                }
-            })
+                    }
+                }, info, context)               
         }
 	}
 }
 
 const generateBatchChildQuery = (hint: any, toTable: StarSchemaTable, link: StarSchemaLink) => {
     const batchingQuery = (array) => {
-        var queryParameter = hint.childrenBatchParameter(array)
-        var child =  toTable.binding
         var queryName = toTable.definition.query
-        var query = child.query[queryName]
-        return query(queryParameter)
+        var queryParameter = hint.childrenBatchParameter(array.map(all => {return all.parent}))
+        var info = array[0].info
+        var context = array[0].context
+        return toTable.binding.delegate('query', queryName, queryParameter, info, context)
     }
 
     const loader = createBatchLoader(batchingQuery, link.sameAt)
-    return async (parent) => loader.load(parent)
+    return async (parent, context, info) => loader.load({parent, context, info})
 } 
 
-// const getParentKeys = (sameAt: any, parent: any) => {
-//     var rtn = {}
-//     for(var key in sameAt) {
-//         rtn[key] = parent[key]
-//     }
-//     return rtn
-// }

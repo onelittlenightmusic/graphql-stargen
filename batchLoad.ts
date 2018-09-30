@@ -8,7 +8,7 @@ export const createBatchLoader = (batchingQuery: BatchingQuery, sameAt: {[key:st
     var childKeyName = sameAt[keyName]
     const batchLoaderOperation: BatchLoaderOperation = async parameterArray => {
         const answers = await batchingQuery(parameterArray)
-        return sortByKey(answers, childKeyName, parameterArray.map(parent => parent[keyName]))
+        return sortByKey(answers, childKeyName, parameterArray.map(parent => parent.parent[keyName]))
     }
 
     return new DataLoader<any, any[]>(batchLoaderOperation);
