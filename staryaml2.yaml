@@ -14,7 +14,7 @@ tables:
     as: 'location'
     sameAt:
       address: place
-    onlyOne: true
+    type: unique
 - name: Location
   definition:
     type: graphql

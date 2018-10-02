@@ -1,5 +1,5 @@
 import { GraphQLSchema } from 'graphql';
-import { loadConfig, StarSchemaTable, StarSchemaLink, getLinkLabel } from './star'
+import { loadConfig, StarSchemaTable, StarSchemaLink, getLinkLabel, LinkType } from './star'
 import { createBatchLoader } from './batchLoad'
 
 
@@ -33,8 +33,13 @@ export async function generateStarSchema(starYamlFile: string, hintOpt?: any): P
             }
             return async (parent: any, args: any, context: any, info: any) => {
                 var results = (await childQuery(parent, context, info))
-                if(link.onlyOne) {
-                    return results[0]
+                switch(link.type) {
+                    case LinkType.Single:
+                        return results[0]
+                    case LinkType.Unique:
+                    case LinkType.Multiple:
+                    default:
+                        break;
                 }
                 return results
             }
@@ -74,6 +79,30 @@ export const createGeneralHint = (toTable: StarSchemaTable, sameAt: {[key:string
                 }, info, context)               
         }
 	}
+}
+export type ChildFieldFunction = (parentField: any) => any
+export const createHintFromFunc = (childfunc: ChildFieldFunction) => {
+    return (toTable: StarSchemaTable, sameAt: {[key:string]: any}) => {
+        var keyName = Object.keys(sameAt)[0]
+        var childKeyName = sameAt[keyName]
+        return {
+            type: 'single',
+            childrenSingleParameter: async (parent, context, info) => { 
+                var param = createParam(childfunc)(childKeyName, keyName, parent)
+                return await toTable.binding.delegate('query', toTable.definition.query,
+                    param, info, context)
+            }
+        }
+    }
+
+}
+
+const createParam = (childfunc: ChildFieldFunction) => {
+    return (childKeyName, keyName, parent) => {
+        return {
+            [childKeyName]: childfunc(parent[keyName])
+        }
+    }
 }
 
 const generateBatchChildQuery = (hint: any, toTable: StarSchemaTable, link: StarSchemaLink) => {

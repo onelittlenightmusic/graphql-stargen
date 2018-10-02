@@ -19,7 +19,14 @@ export interface StarSchemaLink {
     to: string
     as: string
     sameAt: any[]
-    onlyOne: boolean
+    type: LinkType
+}
+
+export type LinkType = "multiple" | "unique" | "single";
+export namespace LinkType{
+    export const Multiple:LinkType = "multiple"
+    export const Unique:LinkType = "unique"
+    export const Single:LinkType = "single"
 }
 
 export interface StarSchemaTable {
@@ -140,16 +147,21 @@ export const loadConfig = (filename: string) => {
     return starSchema
 }
 
-const toType = (type: string, onlyOne: boolean) => {
-    if(onlyOne) {
-        return type
+const toType = (type: string, linkType: string) => {
+    switch (linkType) {
+        case LinkType.Unique:
+        case LinkType.Single:
+            return type
+        case LinkType.Multiple:
+        default:
+            break;
     }
     return `[${type}]`
 }
 
 export const createLinks = (starSchema: StarSchemaTable ) => {
     // todo: use schema
-    var rtn = starSchema.links.map(link => { return `${getLinkLabel(link)}: ${toType(link.to, link.onlyOne)}` }).join('\n')
+    var rtn = starSchema.links.map(link => { return `${getLinkLabel(link)}: ${toType(link.to, link.type)}` }).join('\n')
     console.log(rtn)
     return rtn
 }
