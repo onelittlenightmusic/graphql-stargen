@@ -1,9 +1,17 @@
 # graphql-stargen
 Generate graphql remote schema from star schema file
 
-## TL;DR
+## Installation
 
 ```
+npm install graphql-stargen --save
+```
+
+## Usage
+
+`createStarSchema` function reads [star-yaml file](https://github.com/onelittlenightmusic/star-yaml) and creates `ExecutableSchema`.
+
+```typescript
 import { GraphQLServer } from 'graphql-yoga'
 import { createStarSchema } from 'graphql-stargen'
 
@@ -15,26 +23,22 @@ async function run() {
 	}
 	
 	const server = new GraphQLServer({ schema })
-	server.start({port: 4000}, () =>
-		console.log(`Your GraphQL server is running now ...`),
-	)
+	server.start({port: 4000}, () => console.log(`Your GraphQL server is running now ...`))
 }
 
 run()
 ```
 
-`createStarSchema` function reads [star-yaml file](https://github.com/onelittlenightmusic/star-yaml).
+[star-yaml file](https://github.com/onelittlenightmusic/star-yaml) looks like that.
 
-[star-yaml file](https://github.com/onelittlenightmusic/star-yaml) is like that.
-
-```
+```yaml
 apiVersion: v1
 kind: Star
 tables:
 - name: User
   metadata:
     root: true
-  definition:
+  definition: 
     type: graphql
     url: 'http://localhost:4020'
     query: 'users'
@@ -50,3 +54,33 @@ tables:
     url: 'http://localhost:4021'
     query: 'locations'
 ```
+
+You can serve the following schema on your server.
+
+```graphql
+{ 
+  users {
+    name
+    address
+  }
+}
+{
+  locations {
+    address
+    country
+  }
+}
+{
+  users {
+    name
+    address
+    location {
+      country
+    }
+  }
+}
+```
+
+## ToDo
+
+- AST errors with some GraphQL API sites.

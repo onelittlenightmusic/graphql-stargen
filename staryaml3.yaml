@@ -1,0 +1,23 @@
+# This sample comes from https://github.com/stubailo/schema-stitching-demo
+apiVersion: v1
+kind: Star
+tables:
+- name: Event
+  metadata:
+    root: true
+  definition:
+    type: graphql
+    url: 'https://www.universe.com/graphql/beta'
+    query: 'event'
+  links:
+  - to: 'Location'
+    as: 'location'
+    sameAt:
+      cityName: place
+    type: unique
+- name: Location
+  definition:
+    type: graphql
+    url: 'https://5rrx10z19.lp.gql.zone/graphql'
+    query: 'location'
+  

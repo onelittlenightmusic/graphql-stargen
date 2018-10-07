@@ -16,7 +16,7 @@ tables:
     onlyOne: true
 - name: Location
   definition:
-    type: graphql-opencrud
+    type: graphql_opencrud
     url: 'http://localhost:4021'
     query: 'locations'
   

@@ -1,13 +1,17 @@
 import { GraphQLServer } from 'graphql-yoga'
 import { createStarSchema } from './index'
 // import { StarSchemaTable } from './star';
-import { createHintFromFunc } from './schemagen'
+import { createQueryPackFromFunc } from './schemagen'
 
 async function run() {
-	const paramfunc = (parentField: any) => parentField.toLowerCase()
-	const createHint = createHintFromFunc(paramfunc)
-	const schema = await createStarSchema('./staryaml2.yaml', createHint)
+	// const paramfunc = {
+	// 	place: (address: any) => address.toLowerCase()
+	// }
+	// const queryPack = createQueryPackFromFunc(paramfunc)
+	// const schema = await createStarSchema('./staryaml2.yaml', queryPack)
+	const schema = await createStarSchema('./staryaml2.yaml')
 	// const schema = await createStarSchema('./staryaml.yaml')
+	// const schema = await createStarSchema('./staryaml3.yaml') // Error
 
 	if(schema == null) {
 		throw new Error('no remote schema exists')

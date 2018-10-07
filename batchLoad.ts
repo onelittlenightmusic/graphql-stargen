@@ -4,24 +4,35 @@ type BatchLoaderOperation = (parameterArray: any[]) => Promise<any[]>
 type BatchingQuery = (loaderParameters: any) => any
 
 export const createBatchLoader = (batchingQuery: BatchingQuery, sameAt: {[key:string]: any}) => {
-    var keyName = Object.keys(sameAt)[0]
-    var childKeyName = sameAt[keyName]
     const batchLoaderOperation: BatchLoaderOperation = async parameterArray => {
         const answers = await batchingQuery(parameterArray)
-        return sortByKey(answers, childKeyName, parameterArray.map(parent => parent.parent[keyName]))
+        var parentKeys = Object.keys(sameAt)
+        var sortKeys = parameterArray.map(obj => filteredObj(obj.parent, parentKeys, sameAt))
+        return sortByKey2(answers, sortKeys, parentKeys)
     }
 
     return new DataLoader<any, any[]>(batchLoaderOperation);
-
 }
 
-const sortByKey = (array: any[], keyName: string, keyArray: string[]) => {
+const filteredObj = (obj: any, filterKeys: string[], sameAt?: {[key: string]: string}) => {
+    var rtn = {}
+    filterKeys.forEach(parentField => {
+        var childKey
+        childKey = (sameAt != null) ? sameAt[parentField] : null
+        childKey = childKey || parentField 
+        rtn[childKey] = obj[parentField]
+    })
+    return rtn
+}
+
+const sortByKey2 = (array: any[], keys: any[], parentKeys: string[]) => {
     var arraySortMap: { [key: string]: any[] } = {}
     array.forEach(element => {
-        if(arraySortMap[element[keyName]] == null) {
-            arraySortMap[element[keyName]] = []
+        var key = JSON.stringify(filteredObj(element, parentKeys))
+        if(arraySortMap[key] == null) {
+            arraySortMap[key] = []
         }
-        arraySortMap[element[keyName]].push(element)
+        arraySortMap[key].push(element)
     })
-    return keyArray.map(key => arraySortMap[key])
+    return keys.map(key => arraySortMap[JSON.stringify(key)])
 }

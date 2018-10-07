@@ -2,31 +2,15 @@ import { GraphQLSchema } from 'graphql';
 import { loadConfig, StarSchemaTable, StarSchemaLink, getLinkLabel, LinkType } from './star'
 import { createBatchLoader } from './batchLoad'
 
-
-export async function generateStarSchema(starYamlFile: string, hintOpt?: any): Promise<GraphQLSchema | null> {
+export async function generateStarSchema(starYamlFile: string, opt?: any): Promise<GraphQLSchema | null> {
     var starSchemaMap = loadConfig(starYamlFile)
     await starSchemaMap.getAllSchema()
 
    const createMergeResolver = (link: StarSchemaLink) => {
         return (toTable: StarSchemaTable) => {
-            var hint
-            var creator;
-            if(hintOpt == null) {
-                if(toTable.definition.type == 'graphql-opencrud') {
-                    creator = createOpenCRUDHint
-                } else {
-                    creator = createGeneralHint
-                }
-            } else {
-                creator = hintOpt
-            }
-            hint = creator(toTable, link.sameAt)
-            var childQuery
-            if(hint.type == 'batch') {
-                childQuery = generateBatchChildQuery(hint, toTable, link)
-            } else {
-                childQuery = hint.childrenSingleParameter
-            }
+            var queryPackGenerator = opt || queryPackGenerators[toTable.definition.type] || generalQueryPackageGenerator
+            var queryPack: QueryPackage = queryPackGenerator(link.sameAt)
+            var childQuery = queryPack.getQuery(toTable, link)
             if(childQuery == null) {
                 console.log('null')
                 return
@@ -53,68 +37,116 @@ export async function generateStarSchema(starYamlFile: string, hintOpt?: any): P
     return starSchemaMap.createTotalExecutableSchema(resolvers)
 }
 
-export const createOpenCRUDHint = (toTable: StarSchemaTable, sameAt: {[key:string]: any}) => {
-    var keyName = Object.keys(sameAt)[0]
-    var childKeyName = sameAt[keyName]
-    return {
-        type: 'batch',
-		childrenBatchParameter: parents => { 
+const OpenCRUDQueryPackageGenerator = (sameAt: {[key:string]: string}) => {
+    const add_in = (originalKeys: {[key:string]: string}): {[key:string]: string} => {
+        var rtn = {}
+        for(let key in originalKeys) {
+            rtn[key] = originalKeys[key]+'_in'
+        }
+        return rtn
+    }
+    var keys = add_in(sameAt)
+    var param = mapToParam({}, sameAt)
+    var params = mapToParams({}, keys)
+    return new BatchableQueryPackage(
+        'batch',
+		(parent) => { 
             return { 
-                where: { [childKeyName+'_in']: parents.map(parent => parent[keyName]) }
+                where: param(parent)
             } 
-        }
-	}
-}
-
-export const createGeneralHint = (toTable: StarSchemaTable, sameAt: {[key:string]: any}) => {
-    var keyName = Object.keys(sameAt)[0]
-    var childKeyName = sameAt[keyName]
-    return {
-        type: 'single',
-		childrenSingleParameter: async (parent, context, info) => { 
-            return await toTable.binding.delegate('query', toTable.definition.query,
-                { where: {
-                    [childKeyName]: parent[keyName] 
-                    }
-                }, info, context)               
-        }
-	}
-}
-export type ChildFieldFunction = (parentField: any) => any
-export const createHintFromFunc = (childfunc: ChildFieldFunction) => {
-    return (toTable: StarSchemaTable, sameAt: {[key:string]: any}) => {
-        var keyName = Object.keys(sameAt)[0]
-        var childKeyName = sameAt[keyName]
-        return {
-            type: 'single',
-            childrenSingleParameter: async (parent, context, info) => { 
-                var param = createParam(childfunc)(childKeyName, keyName, parent)
-                return await toTable.binding.delegate('query', toTable.definition.query,
-                    param, info, context)
+        },
+        parents => {
+            return {
+                where: params(parents)
             }
         }
-    }
-
+    )
 }
 
-const createParam = (childfunc: ChildFieldFunction) => {
-    return (childKeyName, keyName, parent) => {
-        return {
-            [childKeyName]: childfunc(parent[keyName])
+
+export class QueryPackage {
+    type: string
+    childSingleQuery: (parent) => any
+    constructor(type: string, childSingleQuery: any) {
+        this.type = type
+        this.childSingleQuery = childSingleQuery
+    }
+    getQuery(toTable: StarSchemaTable, link: StarSchemaLink) {
+        return async (parent, context, info) => {
+            return await toTable.binding.delegate(
+            'query',
+            toTable.definition.query,
+            this.childSingleQuery(parent),
+            info, context)
         }
     }
 }
 
-const generateBatchChildQuery = (hint: any, toTable: StarSchemaTable, link: StarSchemaLink) => {
-    const batchingQuery = (array) => {
-        var queryName = toTable.definition.query
-        var queryParameter = hint.childrenBatchParameter(array.map(all => {return all.parent}))
-        var info = array[0].info
-        var context = array[0].context
-        return toTable.binding.delegate('query', queryName, queryParameter, info, context)
+export class BatchableQueryPackage extends QueryPackage {
+    childrenBatchParameter: (parents) => any    
+    constructor(type: string, childSingleQuery: any, childrenBatchParameter: (any) => any) {
+        super(type, childSingleQuery)
+        this.childrenBatchParameter = childrenBatchParameter
     }
+    generateBatchChildQuery(toTable: StarSchemaTable, link: StarSchemaLink) {
+        const batchingQuery = (array) => {
+            var queryName = toTable.definition.query
+            var allParents = array.map(each => {return each.parent})
+            var queryParameter = this.childrenBatchParameter(allParents)
+            var info = array[0].info
+            var context = array[0].context
+            return toTable.binding.delegate('query', queryName, queryParameter, info, context)
+        }
+    
+        const loader = createBatchLoader(batchingQuery, link.sameAt)
+        return async (parent, context, info) => loader.load({parent, context, info})
+    } 
+    getQuery(toTable: StarSchemaTable, link: StarSchemaLink) {
+        return this.generateBatchChildQuery(toTable, link)
+    }
+}
 
-    const loader = createBatchLoader(batchingQuery, link.sameAt)
-    return async (parent, context, info) => loader.load({parent, context, info})
-} 
+function isBatchable(object: any): object is BatchableQueryPackage {
+    return 'childrenBatchParameter' in object;
+}
 
+export type ChildFieldFunction = {[childKey: string]: (parentField: any) => any }
+export const createQueryPackFromFunc = (childfunc: ChildFieldFunction) => {
+    return (sameAt: {[key:string]: string}) => {
+        return new QueryPackage(
+            'single',
+            mapToParam(childfunc, sameAt)
+        )
+    }
+}
+
+const mapToParam = (childfunc: ChildFieldFunction, sameAt: {[key:string]: string}) => {
+    return (parent) => {
+        var rtn = {}
+        for(let keyName in sameAt) {
+            let childKeyName = sameAt[keyName]
+            let f = childfunc[childKeyName] || ((a) => a)
+            rtn[childKeyName] = f(parent[keyName])
+        }
+        return rtn
+    }
+}
+
+const mapToParams = (childfunc: ChildFieldFunction, sameAt: {[key:string]: string}) => {
+    return (parents) => {
+        var rtn = {}
+        for(let keyName in sameAt) {
+            let childKeyName = sameAt[keyName]
+            let f = childfunc[childKeyName] || ((a) => a)
+            rtn[childKeyName] = parents.map(parent => f(parent[keyName]))
+        }
+        return rtn
+    }
+}
+
+const generalQueryPackageGenerator = createQueryPackFromFunc({})
+
+
+const queryPackGenerators = {
+    graphql_opencrud: OpenCRUDQueryPackageGenerator
+}
