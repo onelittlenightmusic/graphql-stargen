@@ -2,6 +2,10 @@ import { GraphQLServer } from 'graphql-yoga'
 import { createStarSchema } from './index'
 // import { StarSchemaTable } from './star';
 import { createQueryPackFromFunc } from './schemagen'
+import { config } from 'dotenv'
+config()
+
+const PORT = process.env.PORT
 
 async function run() {
 	// const paramfunc = {
@@ -18,7 +22,7 @@ async function run() {
 	}
 	
 	const server = new GraphQLServer({ schema })
-	server.start({port: 4000}, () =>
+	server.start({port: PORT}, () =>
 		console.log(`Your GraphQL server is running now ...`),
 	)
 }
