@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Star
+tables:
+- name: City
+  metadata:
+    root: true
+  definition:
+    type: graphql
+    url: 'https://japan-city-code.now.sh/'
+    query: 'city'
+  links:
+  - to: 'CityEstate'
+    as: 'cityEstate'
+    sameAt:
+      code: cityCode
+    type: unique
+    args:
+      year: 2015
+      area: Housing
+- name: CityEstate
+  definition:
+    type: graphql
+    url: 'https://resas-estate-trans.now.sh/'
+    query: 'cityEstate'
+  

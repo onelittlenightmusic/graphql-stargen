@@ -8,13 +8,21 @@ config()
 const PORT = process.env.PORT
 
 async function run() {
+	// const schema = await createStarSchema('./staryaml.yaml')
 	// const paramfunc = {
 	// 	place: (address: any) => address.toLowerCase()
 	// }
 	// const queryPack = createQueryPackFromFunc(paramfunc)
 	// const schema = await createStarSchema('./staryaml2.yaml', queryPack)
-	const schema = await createStarSchema('./staryaml2.yaml')
-	// const schema = await createStarSchema('./staryaml.yaml')
+	const paramfunc = (parent, args) => {
+		return {
+			cityCode: parent.code.substr(0,5),
+			year: 2015,
+			area: 'Housing'
+		}
+	}
+	const queryPack = createQueryPackFromFunc(paramfunc)
+	const schema = await createStarSchema('./staryaml4.yaml', queryPack)
 	// const schema = await createStarSchema('./staryaml3.yaml') // Error
 
 	if(schema == null) {

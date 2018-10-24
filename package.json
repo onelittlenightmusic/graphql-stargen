@@ -15,7 +15,7 @@
   "homepage": "https://github.com/onelittlenightmusic/graphql-stargen",
   "scripts": {
     "startDev": "nodemon --ext ts,yaml --exec 'ts-node' server.ts",
-    "start": "ts-node- server.ts",
+    "start": "ts-node server.ts",
     "test": "ava",
     "build": "tsc"
   },
