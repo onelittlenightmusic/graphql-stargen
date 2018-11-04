@@ -6,7 +6,7 @@ tables:
     root: true
   definition:
     type: graphql
-    url: 'https://japan-city-code.now.sh/'
+    url: 'https://evening-scrubland-62386.herokuapp.com/'
     query: 'city'
   links:
   - to: 'CityEstate'
@@ -14,12 +14,28 @@ tables:
     sameAt:
       code: cityCode
     type: unique
-    args:
-      year: 2015
-      area: Housing
+  # - to: 'CityEstate'
+  #   as: 'cityEstate2'
+  #   sameAt:
+  #     code: cityCode
+  #   type: unique
+  - to: Location
+    as: citySummary
+    sameAt:
+      cityKanji: Japanese
+    # type: single
+    type: unique
 - name: CityEstate
   definition:
     type: graphql
-    url: 'https://resas-estate-trans.now.sh/'
+    url: 'https://frozen-chamber-61303.herokuapp.com/'
     query: 'cityEstate'
-  
+- name: Location
+  definition:
+    type: graphql
+    url: 'https://guarded-sierra-71026.herokuapp.com/'
+    query: 'location'
+  overlays:
+  - overlayName: batch
+    definition:
+      query: 'locations'

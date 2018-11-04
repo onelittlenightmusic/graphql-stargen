@@ -10,10 +10,10 @@ tables:
     query: 'users'
   links:
   - to: 'Location'
-    # as: 'location2'
+    as: 'location'
     sameAt:
       address: address
-    onlyOne: true
+    type: single
 - name: Location
   definition:
     type: graphql_opencrud
