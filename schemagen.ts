@@ -1,15 +1,16 @@
-import { GraphQLSchema, GraphQLList } from 'graphql';
+import { GraphQLSchema, graphqlSync, introspectionQuery, GraphQLList, GraphQLObjectType, TypeInfo, typeFromAST } from 'graphql';
 import { loadConfig, StarSchemaTable, StarSchemaLink, getLinkLabel, LinkType } from './star'
 import { createBatchLoader } from './batchLoad'
+// import { getSchemaJson } from 'graphql-introspect-parse'
 
 export async function generateStarSchema(starYamlFile: string, opt?: any): Promise<GraphQLSchema | null> {
     var starSchemaMap = loadConfig(starYamlFile)
     await starSchemaMap.getAllSchema()
 
-   const createMergeResolver = (link: StarSchemaLink) => {
+    const createMergeResolver = (link: StarSchemaLink) => {
         var linkName = getLinkLabel(link)
         // console.log(linkName)
-        return (toTable: StarSchemaTable) => {
+        return (fromTable: StarSchemaTable, toTable: StarSchemaTable) => {
             var optFunc = null
             var batchFunc = null
             var targetTable = toTable
@@ -27,10 +28,7 @@ export async function generateStarSchema(starYamlFile: string, opt?: any): Promi
                     }
                 }
             }
-            
-            // var queryPackFromOpt = (optFunc != null) ? createQueryPackFromFunc(optFunc) : null
-            // var queryPackGenerator = createQueryPackFromFunc(link.sameAt, optFunc) || queryPackGenerators[toTable.definition.type] || generalQueryPackageGenerator
-            console.log(JSON.stringify(targetTable.definition))
+            // console.log(JSON.stringify(targetTable.definition))
             var queryPack: QueryPackage = 
                 // createQueryPackFromFunc(link.sameAt, optFunc)
                 (queryPackGenerators[targetTable.definition.type]
@@ -53,7 +51,9 @@ export async function generateStarSchema(starYamlFile: string, opt?: any): Promi
         resolvers[getLinkLabel(link)] = createMergeResolver(link)
     })
 
-    return starSchemaMap.createTotalExecutableSchema(resolvers)
+    var rtn: GraphQLSchema = starSchemaMap.createTotalExecutableSchema(resolvers)
+
+    return rtn
 }
 
 

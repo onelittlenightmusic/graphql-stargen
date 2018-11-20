@@ -29,22 +29,28 @@ async function run() {
 				area: 'Housing'
 			}
 		},
-		citySummary: {
-			single: (parent, args) => {
-				return {
-					Japanese: parent.cityKanji
-				}
-			},
-			batch:  (parents) => {
-				// console.log(JSON.stringify(parents.map(p => p.cityKanji)))
-				return {
-					Japanese_in: parents.map(p => p.cityKanji)
-				}
-			},
-			overlays: {
-				batch: "batch"
-			}
-		}
+		// citySummary: {
+		// 	single: (parent, args) => {
+		// 		return {
+		// 			Japanese: parent.cityKanji
+		// 		}
+		// 	},
+		// 	batch:  (parents) => {
+		// 		// console.log(JSON.stringify(parents.map(p => p.cityKanji)))
+		// 		return {
+		// 			Japanese_in: parents.map(p => p.cityKanji)
+		// 		}
+		// 	},
+		// 	overlays: {
+		// 		batch: "batch"
+		// 	}
+		// }
+		// for query locations
+		// citySummary: (parent, args) => {
+		// 	return {
+		// 		Japanese_in: [parent.cityKanji]
+		// 	}
+		// },
 	}
 	const schema = await createStarSchema('./staryaml4.yaml', linkFunction)
 

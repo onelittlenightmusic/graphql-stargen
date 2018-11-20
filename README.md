@@ -9,7 +9,9 @@ npm install graphql-stargen --save
 
 # Usage
 
-`createStarSchema` function reads [star-yaml file](https://github.com/onelittlenightmusic/star-yaml) and creates `ExecutableSchema`.
+`createStarSchema` function reads [star-yaml file](https://github.com/onelittlenightmusic/star-yaml) and creates executable GraphQL schema.
+
+Here is a simple GraphQL server example.
 
 ```typescript
 import { GraphQLServer } from 'graphql-yoga'
@@ -35,47 +37,54 @@ run()
 apiVersion: v1
 kind: Star
 tables:
-- name: User
+- name: City
   metadata:
     root: true
-  definition: 
+  definition:
     type: graphql
-    url: 'http://localhost:4020'
-    query: 'users'
+    url: 'https://evening-scrubland-62386.herokuapp.com/'
+    query: 'cities'
   links:
-  - to: 'Location'
-    # as: 'location2'
+  - to: 'CityEstate'
+    as: 'cityEstate'
     sameAt:
-      address: address
-    onlyOne: true
+      code: cityCode
+  - to: Location
+    as: citySummary
+    sameAt:
+      cityKanji: Japanese
+- name: CityEstate
+  definition:
+    type: graphql
+    url: 'https://frozen-chamber-61303.herokuapp.com/'
+    query: 'cityEstate'
 - name: Location
   definition:
-    type: graphql-opencrud
-    url: 'http://localhost:4021'
-    query: 'locations'
+    type: graphql
+    url: 'https://guarded-sierra-71026.herokuapp.com/'
+    query: 'location'
 ```
 
 You can serve the following schema on your server.
 
 ```graphql
-{ 
-  users {
-    name
-    address
-  }
-}
 {
-  locations {
-    address
-    country
-  }
-}
-{
-  users {
-    name
-    address
-    location {
-      country
+  cities {
+    # this represents the type 'City'
+    code
+    cityKana
+    cityKanji
+    cityEstate {
+      # this represents the type 'CityEstate' linked by a 'cityEstate' field
+      year
+      value
+    }
+    citySummary {
+      # this represents the type 'Location' linked by a 'citySummary' field
+      Area
+      Population
+      Density
+      Japanese
     }
   }
 }
@@ -107,7 +116,6 @@ tables:
     as: 'cityEstate'
     sameAt:
       code: cityCode
-    type: unique
   #links end
 - name: CityEstate
   definition:

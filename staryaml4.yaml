@@ -7,24 +7,20 @@ tables:
   definition:
     type: graphql
     url: 'https://evening-scrubland-62386.herokuapp.com/'
-    query: 'city'
+    query: 'cities'
   links:
   - to: 'CityEstate'
     as: 'cityEstate'
     sameAt:
       code: cityCode
-    type: unique
   # - to: 'CityEstate'
   #   as: 'cityEstate2'
   #   sameAt:
   #     code: cityCode
-  #   type: unique
   - to: Location
     as: citySummary
     sameAt:
       cityKanji: Japanese
-    # type: single
-    type: unique
 - name: CityEstate
   definition:
     type: graphql
@@ -35,7 +31,12 @@ tables:
     type: graphql
     url: 'https://guarded-sierra-71026.herokuapp.com/'
     query: 'location'
-  overlays:
-  - overlayName: batch
-    definition:
-      query: 'locations'
+  # overlays:
+  # - overlayName: batch
+  #   definition:
+  #     query: 'locations'
+# - name: Location
+#   definition:
+#     type: graphql
+#     url: 'https://guarded-sierra-71026.herokuapp.com/'
+#     query: 'locations'

@@ -4,6 +4,7 @@ import { GraphQLSchema } from 'graphql'
 import { createRemoteSchema } from './createRemoteSchema'
 import { mergeSchemas } from 'graphql-tools'
 import { Binding } from 'graphql-binding';
+import { getSchemaJson, GqlType } from 'graphql-introspect-parse';
 
 interface StarSchemaMetadata {
     root: boolean
@@ -36,7 +37,7 @@ export interface StarSchemaTable {
     GraphQLSchema: GraphQLSchema
     binding: Binding
     overlays: StarSchemaTable[]
-    createLinkSchema(): string | null
+    createLinkSchema(StarSchemaMap): string | null
     createResolvers(any, StarSchemaMap): any
     createSchema(): void
     getOverlayed(String): StarSchemaTable
@@ -66,11 +67,11 @@ class StarSchemaTableImpl implements StarSchemaTable {
         this._overlayed = {}
         Object.assign(this, table)
     }
-    createLinkSchema() {
+    createLinkSchema(allMap: StarSchemaMap) {
         if(this.links.length == 0) { return null }
         return `
         extend type ${this.name} {
-            ${createLinks(this)}
+            ${createLinks(this, allMap)}
         }
     `
     }
@@ -81,7 +82,7 @@ class StarSchemaTableImpl implements StarSchemaTable {
             var toTable = allMap.find(jo.to)
             var label = getLinkLabel(jo)
             var fragment = `fragment ${label}Fragment on ${name} {${Object.keys(jo.sameAt).join(',')}}`
-            var resolverOfJoin = mergeResolvers[label](toTable)
+            var resolverOfJoin = mergeResolvers[label](this, toTable)
             // var resolve = async (parent: any, args: any, context: any, info: any) => {
             //     return await (resolverOfJoin(parent, args, context, info))
             // }
@@ -96,6 +97,8 @@ class StarSchemaTableImpl implements StarSchemaTable {
     async createSchema() {
         this.GraphQLSchema = await createRemoteSchema(this.definition.url)
         this.binding = createBinding(this.GraphQLSchema)
+        // console.log(printSchema(this.GraphQLSchema))
+        // console.log(JSON.stringify(this.GraphQLSchema,null,2))
     }
     getOverlayed(name: string) {
         if(this._overlayed[name] == null) {
@@ -104,7 +107,10 @@ class StarSchemaTableImpl implements StarSchemaTable {
                 return this
             }
             var obj = new StarSchemaTableImpl(this)
-            obj.definition = Object.assign(this.definition, overlay.definition)
+            obj.definition = { 
+                ...this.definition, 
+                ...overlay.definition
+            }
             // console.log(JSON.stringify(obj))
             this._overlayed[name] = obj
         }
@@ -137,7 +143,7 @@ class StarSchemaMapImpl implements StarSchemaMap {
     schemas() {
         var rtn: (GraphQLSchema | string)[] = this.tables.map(schema => schema.GraphQLSchema)
         // todo: not only root 
-        var linkDef = this.root.createLinkSchema()
+        var linkDef = this.root.createLinkSchema(this)
         if(linkDef != null) {
             rtn.push(linkDef)
         }
@@ -165,17 +171,28 @@ export const loadConfig = (filename: string) => {
     return starSchema
 }
 
-const toType = (type: string, linkType: LinkType) => {
-    if(linkType == LinkType.Unique || linkType == LinkType.Single)
-        return type
-    return `[${type}]`
+const typeToGqlStr = (type: string, returnType: GqlType) => {
+    // if(linkType == LinkType.Unique || linkType == LinkType.Single)
+    //     return type
+    // return `[${type}]`
+    if(returnType.isList()) {
+        return `[${type}]`
+    }
+    return type
 }
 
-export const createLinks = (starSchema: StarSchemaTable ) => {
-    // todo: use schema
-    var rtn = starSchema.links.map(link => { return `${getLinkLabel(link)}: ${toType(link.to, link.type)}` }).join('\n')
-    // console.log(rtn)
-    return rtn
+export const createLinks = (fromTable: StarSchemaTable, allMap: StarSchemaMap) => {
+    var linkStrings:string[] = []
+    for(var link of fromTable.links) {
+        var toTable = allMap.find(link.to)
+        if(toTable == null) continue
+        var json = getSchemaJson(toTable.GraphQLSchema)
+        var query = json.getQuery(toTable.definition.query)
+        // console.log(JSON.stringify(query, null, 2))
+        linkStrings.push(`${getLinkLabel(link)}: ${typeToGqlStr(link.to, query.getReturnType())}` )
+        // console.log(rtn)
+    }
+    return linkStrings.join('\n')
 }
 
 export const getLinkLabel = (link: StarSchemaLink) => {
